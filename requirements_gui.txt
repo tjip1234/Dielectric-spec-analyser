@@ -1,0 +1,13 @@
+# S1P GUI - Requirements
+
+# Core scientific libraries
+numpy>=1.20.0
+matplotlib>=3.3.0
+scikit-rf>=0.20.0
+
+# GUI library
+PyQt5>=5.15.0
+
+# Optional but recommended
+scipy>=1.6.0
+pandas>=1.2.0

@@ -1,4 +1,4 @@
 /.venv
 /ARCHITECTURE.py
-/s1p_gui/__pycache__/
-s1p_gui/__pycache__/constants.cpython-313.pyc
+s1p_gui/__pycache__/
+

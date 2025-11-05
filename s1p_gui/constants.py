@@ -9,7 +9,7 @@ SPEED_OF_LIGHT = 299792458  # Speed of light (m/s)
 # Frequency ranges for analysis (Hz)
 FREQ_RANGES = {
     'low': (10e6, 500e6, '10 MHz - 500 MHz'),
-    'mid': (500e6, 3e9, '500 MHz - 3 GHz'),
+    'mid': (100e6, 3e9, '100 MHz - 3 GHz'),
     'full': (0, float('inf'), 'Full Sweep'),
     'custom': (0, 0, 'Custom Range')
 }

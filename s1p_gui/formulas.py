@@ -1,5 +1,13 @@
 """
-Dielectric property calculations and analysis formulas
+Dielectric property calculations and basic analysis formulas
+
+Provides functions for:
+- Dielectric property calculation from S11 measurements
+- Slope and integral calculations
+- Statistical analysis and filtering
+- Frequency range utilities
+
+For Cole-Cole model fitting, see cole_cole.py
 """
 
 import numpy as np
@@ -7,37 +15,51 @@ from typing import Dict, Optional, Tuple
 from .constants import EPSILON_0
 
 
-def calculate_dielectric_properties(s11_complex: np.ndarray, 
-                                    frequencies: np.ndarray) -> Dict[str, np.ndarray]:
+# ============================================================================
+# DIELECTRIC PROPERTY CALCULATION
+# ============================================================================
+
+def calculate_dielectric_properties(s11_complex: np.ndarray,
+                                    frequencies: np.ndarray,
+                                    calibration=None) -> Dict[str, np.ndarray]:
     """
-    Calculate dielectric properties from S11 measurements using open coaxial probe
-    
+    Calculate dielectric properties from S11 measurements using calibration
+
+    Uses 3-liquid calibration method if calibration object provided.
+    Falls back to open-ended coaxial probe model if no calibration.
+
     Args:
         s11_complex: Complex S11 parameters
         frequencies: Frequency array in Hz
-        
+        calibration: ProbeCalibration object (optional). If None, uses simplified model.
+
     Returns:
         Dictionary containing all calculated properties
     """
-    # Calculate reflection coefficient
-    gamma = s11_complex
-    
-    # For open coaxial probe measurement:
-    # Simplified model: epsilon_r = ((1+gamma)/(1-gamma))^2
-    epsilon_complex = ((1 + gamma) / (1 - gamma)) ** 2
-    
-    epsilon_prime = np.real(epsilon_complex)
-    epsilon_double_prime = np.imag(epsilon_complex)
-    
+    if calibration is not None and calibration.is_calibrated():
+        # Use calibration-based conversion (only for f >= 0.5 GHz stable region)
+        epsilon_prime, epsilon_double_prime = calibration.convert_s11_to_permittivity(
+            s11_complex, frequencies, min_frequency=0.5e9
+        )
+    else:
+        # Fallback to simplified model for open coaxial probe
+        # Simplified model: epsilon_r = ((1+gamma)/(1-gamma))^2
+        gamma = s11_complex
+        epsilon_complex = ((1 + gamma) / (1 - gamma)) ** 2
+
+        epsilon_prime = np.real(epsilon_complex)
+        epsilon_double_prime = np.imag(epsilon_complex)
+
     # Complex permittivity magnitude
+    epsilon_complex = epsilon_prime - 1j * epsilon_double_prime
     epsilon_magnitude = np.abs(epsilon_complex)
-    
+
     # S11 properties
     s11_mag = np.abs(s11_complex)
     s11_phase = np.angle(s11_complex, deg=True)
     # Avoid log10(0) by adding small epsilon
     s11_db = 20 * np.log10(np.maximum(s11_mag, 1e-12))
-    
+
     return {
         'frequency': frequencies,
         's11': s11_complex,
@@ -49,6 +71,10 @@ def calculate_dielectric_properties(s11_complex: np.ndarray,
         'epsilon_magnitude': epsilon_magnitude,
     }
 
+
+# ============================================================================
+# BASIC ANALYSIS: SLOPES, INTEGRALS, STATISTICS
+# ============================================================================
 
 def calculate_slope(frequencies: np.ndarray, values: np.ndarray) -> Tuple[float, float]:
     """
@@ -244,6 +270,10 @@ def filter_frequency_range(data: Dict[str, np.ndarray],
     
     return filtered_data
 
+
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
 
 def auto_detect_stable_regions(frequencies: np.ndarray,
                                metric: np.ndarray,

@@ -11,14 +11,15 @@ from .formulas import calculate_dielectric_properties, filter_frequency_range
 
 class S1PDataFile:
     """Represents a single S1P data file with computed properties"""
-    
-    def __init__(self, filepath: Path, name: Optional[str] = None):
+
+    def __init__(self, filepath: Path, name: Optional[str] = None, calibration=None):
         """
         Initialize S1P data file
-        
+
         Args:
             filepath: Path to .s1p file
             name: Display name (defaults to filename stem)
+            calibration: ProbeCalibration object (optional)
         """
         self.filepath = Path(filepath)
         self.name = name or self.filepath.stem
@@ -27,30 +28,45 @@ class S1PDataFile:
         self.filtered_data = None
         self.is_loaded = False
         self.color = None
-        
+        self.calibration = calibration
+
     def load(self) -> bool:
         """
         Load S1P file and calculate properties
-        
+
+        Uses calibration if available, otherwise falls back to simplified model.
+
         Returns:
             True if successful, False otherwise
         """
         try:
             self.network = rf.Network(str(self.filepath))
-            
+
             # Calculate full spectrum properties
             freq = self.network.f
             s11 = self.network.s[:, 0, 0]
-            
-            self.full_data = calculate_dielectric_properties(s11, freq)
+
+            self.full_data = calculate_dielectric_properties(s11, freq, self.calibration)
             self.filtered_data = self.full_data.copy()
             self.is_loaded = True
             return True
-            
+
         except Exception as e:
             print(f"Error loading {self.filepath}: {e}")
             self.is_loaded = False
             return False
+
+    def set_calibration(self, calibration):
+        """
+        Set calibration for this file and reload data
+
+        Args:
+            calibration: ProbeCalibration object
+        """
+        self.calibration = calibration
+        if self.is_loaded and self.network is not None:
+            # Recalculate with new calibration
+            self.load()
     
     def apply_frequency_filter(self, freq_min: float, freq_max: float):
         """
@@ -94,25 +110,38 @@ class S1PDataFile:
 
 
 class DataManager:
-    """Manages multiple S1P data files"""
-    
-    def __init__(self):
+    """Manages multiple S1P data files with optional calibration"""
+
+    def __init__(self, calibration=None):
         self.files: List[S1PDataFile] = []
         self.active_files: List[bool] = []
-        
+        self.calibration = calibration
+
+    def set_calibration(self, calibration):
+        """
+        Set calibration and apply to all files
+
+        Args:
+            calibration: ProbeCalibration object
+        """
+        self.calibration = calibration
+        # Apply to all loaded files
+        for file in self.files:
+            file.set_calibration(calibration)
+
     def add_file(self, filepath: Path, name: Optional[str] = None) -> Optional[S1PDataFile]:
         """
         Add and load a new S1P file
-        
+
         Args:
             filepath: Path to .s1p file
             name: Optional display name
-            
+
         Returns:
             S1PDataFile object if successful, None otherwise
         """
-        data_file = S1PDataFile(filepath, name)
-        
+        data_file = S1PDataFile(filepath, name, self.calibration)
+
         if data_file.load():
             self.files.append(data_file)
             self.active_files.append(True)

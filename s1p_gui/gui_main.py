@@ -222,6 +222,19 @@ class S1PMainWindow(QMainWindow):
         deriv_layout.addWidget(self.deriv_check)
         deriv_layout.addWidget(self.deriv_on_trend_check)
         plot_layout.addLayout(deriv_layout)
+        
+        # Polynomial order control
+        poly_layout = QHBoxLayout()
+        poly_layout.addWidget(QLabel("Polynomial order:"))
+        self.poly_order_spin = QDoubleSpinBox()
+        self.poly_order_spin.setRange(1, 20)
+        self.poly_order_spin.setValue(5)
+        self.poly_order_spin.setDecimals(0)
+        self.poly_order_spin.setSingleStep(1)
+        self.poly_order_spin.valueChanged.connect(self.update_plot)
+        poly_layout.addWidget(self.poly_order_spin)
+        poly_layout.addWidget(QLabel("(for fits/derivs)"))
+        plot_layout.addLayout(poly_layout)
 
         left_layout.addWidget(plot_group)
 
@@ -604,12 +617,15 @@ class S1PMainWindow(QMainWindow):
                     'values': values_valid
                 })
 
-            # Draw linear trendline if requested
+            # Draw polynomial trendline if requested
             if show_trendlines:
-                # linear fit in GHz
-                coeffs = np.polyfit(freq_ghz, values_valid, 1)
+                # Get polynomial order from spinbox
+                poly_order = int(self.poly_order_spin.value())
+                
+                # Polynomial fit in GHz
+                coeffs = np.polyfit(freq_ghz, values_valid, poly_order)
                 trend = np.polyval(coeffs, freq_ghz)
-                trend_label = f"{file.name} (trend)" if show_data_lines else f"{file.name}"
+                trend_label = f"{file.name} (poly{poly_order})" if show_data_lines else f"{file.name}"
                 trend_line, = self.canvas.axes.plot(freq_ghz, trend, linestyle='--',
                                                     color=file.color, alpha=0.7, label=trend_label)
 
@@ -622,20 +638,23 @@ class S1PMainWindow(QMainWindow):
                         'values': trend
                     })
 
-                # Display derivative values on trendline if requested
+                # Display derivative values on polynomial trendline if requested
                 if show_deriv_on_trend:
-                    # Calculate derivative of trendline (which is just the slope)
-                    slope = coeffs[0]
-                    # Display slope at a few points along the trendline
-                    # Sample every 10 points or fewer if not enough points
+                    # Calculate derivative of polynomial (analytical derivative)
+                    # polyder returns coefficients of derivative polynomial
+                    deriv_coeffs = np.polyder(coeffs)
+                    deriv_values = np.polyval(deriv_coeffs, freq_ghz)
+                    
+                    # Display derivative at a few points along the trendline
                     num_samples = min(3, len(freq_ghz) // 5 + 1) if len(freq_ghz) > 5 else 1
                     sample_indices = np.linspace(0, len(freq_ghz) - 1, num_samples, dtype=int)
 
                     for idx in sample_indices:
                         x_pos = freq_ghz[idx]
                         y_pos = trend[idx]
+                        deriv_val = deriv_values[idx]
                         # Format the derivative value with appropriate precision
-                        deriv_text = f"d/dGHz:\n{slope:.2e}"
+                        deriv_text = f"d/dGHz:\n{deriv_val:.2e}"
                         self.canvas.axes.annotate(
                             deriv_text,
                             xy=(x_pos, y_pos),
@@ -652,10 +671,24 @@ class S1PMainWindow(QMainWindow):
                     self.deriv_ax = self.canvas.axes.twinx()
                     # offset the right spine a bit
                     self.deriv_ax.spines['right'].set_position(('outward', 60))
-                # smooth derivative using numpy.gradient
-                deriv = np.gradient(values_valid, freq_ghz)
-                self.deriv_ax.plot(freq_ghz, deriv, linestyle=':', color=file.color, alpha=0.9)
+                
+                # If trendlines are shown, use polynomial derivative, otherwise numerical gradient
+                if show_trendlines:
+                    # Use analytical derivative of polynomial fit
+                    poly_order = int(self.poly_order_spin.value())
+                    coeffs = np.polyfit(freq_ghz, values_valid, poly_order)
+                    deriv_coeffs = np.polyder(coeffs)
+                    deriv = np.polyval(deriv_coeffs, freq_ghz)
+                    deriv_label = f"{file.name} d/dGHz (poly{poly_order})"
+                else:
+                    # Use numerical gradient on raw data
+                    deriv = np.gradient(values_valid, freq_ghz)
+                    deriv_label = f"{file.name} d/dGHz"
+                
+                self.deriv_ax.plot(freq_ghz, deriv, linestyle=':', color=file.color, 
+                                  alpha=0.9, label=deriv_label)
                 self.deriv_ax.set_ylabel('d(metric)/dGHz', fontweight='bold')
+                self.deriv_ax.legend(loc='upper right')
         
         # Labels and legend
         self.canvas.axes.set_xlabel('Frequency (GHz)', fontweight='bold')

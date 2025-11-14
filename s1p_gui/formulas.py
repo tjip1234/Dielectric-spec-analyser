@@ -56,7 +56,9 @@ def calculate_dielectric_properties(s11_complex: np.ndarray,
 
     # S11 properties
     s11_mag = np.abs(s11_complex)
-    s11_phase = np.angle(s11_complex, deg=True)
+    s11_phase_raw = np.angle(s11_complex, deg=False)  # Get phase in radians first
+    s11_phase_unwrapped = np.unwrap(s11_phase_raw)  # Unwrap phase discontinuities
+    s11_phase = np.degrees(s11_phase_unwrapped)  # Convert to degrees
     # Avoid log10(0) by adding small epsilon
     s11_db = 20 * np.log10(np.maximum(s11_mag, 1e-12))
 

@@ -1,0 +1,51 @@
+Evaluation Results
+==================
+
+Overall Metrics:
+  Hamming Loss: 0.0533
+  Exact Match Ratio: 0.6154
+
+Per-Group Performance:
+--------------------------------------------------
+
+ALCOHOL:
+  Precision: 0.9000
+  Recall: 0.8182
+  F1-Score: 0.8571
+  Support: None
+
+HYDROXYL:
+  Precision: 0.8889
+  Recall: 0.7273
+  F1-Score: 0.8000
+  Support: None
+
+ETHER:
+  Precision: 1.0000
+  Recall: 1.0000
+  F1-Score: 1.0000
+  Support: None
+
+IONIC:
+  Precision: 1.0000
+  Recall: 1.0000
+  F1-Score: 1.0000
+  Support: None
+
+DIOL:
+  Precision: 1.0000
+  Recall: 0.6667
+  F1-Score: 0.8000
+  Support: None
+
+ALKALI_METAL:
+  Precision: 1.0000
+  Recall: 1.0000
+  F1-Score: 1.0000
+  Support: None
+
+NITRATE:
+  Precision: 0.0000
+  Recall: 0.0000
+  F1-Score: 0.0000
+  Support: None

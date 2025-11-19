@@ -21,7 +21,8 @@ from .constants import EPSILON_0
 
 def calculate_dielectric_properties(s11_complex: np.ndarray,
                                     frequencies: np.ndarray,
-                                    calibration=None) -> Dict[str, np.ndarray]:
+                                    calibration=None,
+                                    unwrap_phase: bool = True) -> Dict[str, np.ndarray]:
     """
     Calculate dielectric properties from S11 measurements using calibration
 
@@ -32,6 +33,7 @@ def calculate_dielectric_properties(s11_complex: np.ndarray,
         s11_complex: Complex S11 parameters
         frequencies: Frequency array in Hz
         calibration: ProbeCalibration object (optional). If None, uses simplified model.
+        unwrap_phase: If True, unwrap phase discontinuities at ±180°. Default True.
 
     Returns:
         Dictionary containing all calculated properties
@@ -57,8 +59,15 @@ def calculate_dielectric_properties(s11_complex: np.ndarray,
     # S11 properties
     s11_mag = np.abs(s11_complex)
     s11_phase_raw = np.angle(s11_complex, deg=False)  # Get phase in radians first
-    s11_phase_unwrapped = np.unwrap(s11_phase_raw)  # Unwrap phase discontinuities
-    s11_phase = np.degrees(s11_phase_unwrapped)  # Convert to degrees
+    
+    if unwrap_phase:
+        # Unwrap phase discontinuities at ±180° boundaries
+        s11_phase_unwrapped = np.unwrap(s11_phase_raw)
+        s11_phase = np.degrees(s11_phase_unwrapped)
+    else:
+        # Keep raw phase with discontinuities
+        s11_phase = np.degrees(s11_phase_raw)
+    
     # Avoid log10(0) by adding small epsilon
     s11_db = 20 * np.log10(np.maximum(s11_mag, 1e-12))
 

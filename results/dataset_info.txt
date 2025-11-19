@@ -1,0 +1,46 @@
+Dataset Information
+==================
+
+Total samples: 65
+Total features: 22
+Polynomial degree: 6
+Minimum frequency: 100 MHz
+
+Functional Groups:
+  alcohol: 40 samples (61.5%)
+  hydroxyl: 42 samples (64.6%)
+  ether: 14 samples (21.5%)
+  ketone: 12 samples (18.5%)
+  carbonyl: 13 samples (20.0%)
+  carboxylate: 2 samples (3.1%)
+  amino: 2 samples (3.1%)
+  sodium_salt: 2 samples (3.1%)
+  ionic: 6 samples (9.2%)
+  diol: 12 samples (18.5%)
+  halide: 4 samples (6.2%)
+  alkali_metal: 6 samples (9.2%)
+  nitrate: 2 samples (3.1%)
+
+Features:
+  - db_coeff_6
+  - db_coeff_5
+  - db_coeff_4
+  - db_coeff_3
+  - db_coeff_2
+  - db_coeff_1
+  - db_coeff_0
+  - phase_coeff_6
+  - phase_coeff_5
+  - phase_coeff_4
+  - phase_coeff_3
+  - phase_coeff_2
+  - phase_coeff_1
+  - phase_coeff_0
+  - concentration_percent
+  - is_pure
+  - molecular_weight
+  - solvent_water
+  - solvent_ethanol
+  - solvent_isopropanol
+  - solvent_other
+  - solvent_none

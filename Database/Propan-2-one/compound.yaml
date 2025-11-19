@@ -1,0 +1,110 @@
+compound:
+  common_name: Acetone
+  chemical_name: Propan-2-one
+  cas_number: 67-64-1
+  molecular_weight: 58.08
+  functional_groups: [ketone, carbonyl]
+  chemical_formula: C3H6O
+
+measurements:
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: null
+    is_pure: true
+    data_file: propan-2-one.s1p
+  
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: DI water
+    is_pure: true
+    data_file: 0%.s1p
+  
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      volume_ml: 10.0
+      volume_percent: 10.0
+    data_file: 10%.s1p
+  
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      volume_ml: 10.0
+      volume_percent: 20.0
+    data_file: 20%.s1p
+  
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      volume_ml: 10.0
+      volume_percent: 30.0
+    data_file: 30%.s1p
+  
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      volume_ml: 10.0
+      volume_percent: 40.0
+    data_file: 40%.s1p
+  
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      volume_ml: 10.0
+      volume_percent: 50.0
+    data_file: 50%.s1p
+  
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      volume_ml: 10.0
+      volume_percent: 60.0
+    data_file: 60%.s1p
+  
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      volume_ml: 10.0
+      volume_percent: 70.0
+    data_file: 70%.s1p
+  
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      volume_ml: 10.0
+      volume_percent: 80.0
+    data_file: 80%.s1p
+  
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      volume_ml: 10.0
+      volume_percent: 90.0
+    data_file: 90%.s1p
+  
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      volume_ml: 10.0
+      volume_percent: 100.0
+    data_file: 100%.s1p

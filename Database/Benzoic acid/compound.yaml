@@ -1,0 +1,14 @@
+compound:
+  common_name: Benzoic acid
+  chemical_name: Benzoic acid
+  cas_number: 65-85-0
+  molecular_weight: 122.12
+  functional_groups: [carboxylic_acid, aromatic]
+  chemical_formula: C7H6O2
+
+measurements:
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: null
+    is_pure: true
+    data_file: benzoic-acid.s1p

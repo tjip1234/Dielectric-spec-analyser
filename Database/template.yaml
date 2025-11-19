@@ -1,0 +1,18 @@
+compound:
+  common_name: ""
+  chemical_name: ""
+  cas_number: ""
+  molecular_weight: 0.0
+  functional_groups: []
+  chemical_formula: ""
+
+measurements:
+  - date: YYYY-MM-DD
+    temperature_c: 0.0
+    solvent: null  # null for pure compounds, "DI water"/"ethanol"/etc for solutions
+    is_pure: true/false
+    concentration:  # omit this entire section for pure compounds
+      volume_ml: 0.0  # always specify
+      mass_g: 0.0     # if known
+      volume_percent: 0.0  # if known (v/v)
+    data_file: filename.s1p

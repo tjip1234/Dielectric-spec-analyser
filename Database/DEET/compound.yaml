@@ -1,0 +1,14 @@
+compound:
+  common_name: DEET
+  chemical_name: N,N-Diethyl-3-methylbenzamide
+  cas_number: 134-62-3
+  molecular_weight: 191.27
+  functional_groups: [amide, aromatic, tertiary_amine]
+  chemical_formula: C12H17NO
+
+measurements:
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: null
+    is_pure: true
+    data_file: DEET.s1p

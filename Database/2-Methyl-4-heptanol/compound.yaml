@@ -1,0 +1,14 @@
+compound:
+  common_name: 2-Methyl-4-heptanol
+  chemical_name: 2-Methyl-4-heptanol
+  cas_number: 56298-90-9
+  molecular_weight: 130.23
+  functional_groups: [alcohol, hydroxyl]
+  chemical_formula: C8H18O
+
+measurements:
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: null
+    is_pure: true
+    data_file: 2-methyl-4-heptanol.s1p

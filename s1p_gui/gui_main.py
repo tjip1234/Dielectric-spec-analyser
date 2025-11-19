@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QListWidget, QLabel, QComboBox, QDoubleSpinBox,
     QCheckBox, QGroupBox, QFileDialog, QSplitter, QTextEdit,
-    QListWidgetItem, QAbstractItemView, QMessageBox
+    QListWidgetItem, QAbstractItemView, QMessageBox, QTabWidget
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
@@ -25,7 +25,7 @@ from .data_loader import DataManager, find_s1p_files
 from .formulas import calculate_statistics
 from .cole_cole import calculate_cole_cole_parameters
 from .constants import FREQ_RANGES, AVAILABLE_METRICS, PLOT_COLORS, DEFAULT_PLOT_STYLE
-from .calibration import ProbeCalibration
+from .compound_browser import CompoundBrowserWidget
 
 
 class PlotCanvas(FigureCanvasQTAgg):
@@ -56,9 +56,8 @@ class S1PMainWindow(QMainWindow):
         self.setWindowTitle("S1P Dielectric Analysis Tool")
         self.setGeometry(100, 100, 1400, 900)
         
-        # Data manager and calibration
-        self.calibration = ProbeCalibration()
-        self.data_manager = DataManager(self.calibration)
+        # Data manager
+        self.data_manager = DataManager(calibration=None)
         self.current_directory = Path.home()
 
         # Initialize plot state
@@ -69,8 +68,7 @@ class S1PMainWindow(QMainWindow):
         # Store statistics data for export
         self.current_stats_data = None
 
-        # Calibration UI state
-        self.ref_files = {}  # {'water': path, 'ethanol': path, 'isopropanol': path}
+
         
         # Setup UI
         self.setup_ui()
@@ -119,6 +117,32 @@ class S1PMainWindow(QMainWindow):
         
         # === LEFT PANEL: CONTROLS ===
         
+        # Create tab widget for Database and Manual file loading
+        tabs = QTabWidget()
+        left_layout.addWidget(tabs)
+        
+        # === DATABASE TAB ===
+        database_tab = QWidget()
+        database_layout = QVBoxLayout()
+        database_tab.setLayout(database_layout)
+        
+        # Find Database directory (relative to script location)
+        script_dir = Path(__file__).parent.parent
+        database_dir = script_dir / "Database"
+        
+        # Create compound browser
+        self.compound_browser = CompoundBrowserWidget(database_dir)
+        self.compound_browser.measurements_selected.connect(self.add_measurements_from_database)
+        self.compound_browser.clear_all_requested_signal.connect(self.clear_all_files)
+        database_layout.addWidget(self.compound_browser)
+        
+        tabs.addTab(database_tab, "📚 Database")
+        
+        # === MANUAL FILES TAB ===
+        manual_tab = QWidget()
+        manual_layout = QVBoxLayout()
+        manual_tab.setLayout(manual_layout)
+        
         # File management group
         file_group = QGroupBox("File Management")
         file_layout = QVBoxLayout()
@@ -136,18 +160,29 @@ class S1PMainWindow(QMainWindow):
         self.btn_clear_all.clicked.connect(self.clear_all_files)
         btn_layout.addWidget(self.btn_add_file)
         btn_layout.addWidget(self.btn_add_folder)
-        btn_layout.addWidget(self.btn_remove_file)
-        btn_layout.addWidget(self.btn_clear_all)
         file_layout.addLayout(btn_layout)
+        
+        btn_layout2 = QHBoxLayout()
+        btn_layout2.addWidget(self.btn_remove_file)
+        btn_layout2.addWidget(self.btn_clear_all)
+        file_layout.addLayout(btn_layout2)
+        
+        manual_layout.addWidget(file_group)
+        
+        tabs.addTab(manual_tab, "📁 Manual Files")
+        
+        # === LOADED FILES (shared between tabs) ===
+        loaded_group = QGroupBox("Loaded Files")
+        loaded_layout = QVBoxLayout()
+        loaded_group.setLayout(loaded_layout)
         
         # File list with checkboxes
         self.file_list = QListWidget()
         self.file_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.file_list.itemChanged.connect(self.on_file_toggled)
-        file_layout.addWidget(QLabel("Loaded Files:"))
-        file_layout.addWidget(self.file_list)
+        loaded_layout.addWidget(self.file_list)
         
-        left_layout.addWidget(file_group)
+        left_layout.addWidget(loaded_group)
         
         # Plot settings group
         plot_group = QGroupBox("Plot Settings")
@@ -201,6 +236,15 @@ class S1PMainWindow(QMainWindow):
         scale_layout.addWidget(self.log_x_check)
         scale_layout.addWidget(self.log_y_check)
         plot_layout.addLayout(scale_layout)
+        
+        # Phase unwrapping option
+        phase_layout = QHBoxLayout()
+        self.unwrap_phase_check = QCheckBox("Unwrap S11 phase")
+        self.unwrap_phase_check.setChecked(True)  # Enabled by default
+        self.unwrap_phase_check.setToolTip("Remove ±180° discontinuities in S11 phase data")
+        self.unwrap_phase_check.stateChanged.connect(self.on_unwrap_phase_changed)
+        phase_layout.addWidget(self.unwrap_phase_check)
+        plot_layout.addLayout(phase_layout)
 
         # Data lines & trendline options
         data_lines_layout = QHBoxLayout()
@@ -237,71 +281,6 @@ class S1PMainWindow(QMainWindow):
         plot_layout.addLayout(poly_layout)
 
         left_layout.addWidget(plot_group)
-
-        # Calibration panel
-        cal_group = QGroupBox("Probe Calibration")
-        cal_layout = QVBoxLayout()
-        cal_group.setLayout(cal_layout)
-
-        # Status label
-        self.cal_status_label = QLabel("Status: No calibration")
-        self.cal_status_label.setStyleSheet("color: gray; font-weight: bold;")
-        cal_layout.addWidget(self.cal_status_label)
-
-        # Load reference files
-        ref_files_label = QLabel("Reference Files:")
-        cal_layout.addWidget(ref_files_label)
-
-        # Water file button
-        water_layout = QHBoxLayout()
-        water_layout.addWidget(QLabel("Water:"))
-        self.btn_load_water = QPushButton("Load")
-        self.btn_load_water.clicked.connect(lambda: self.load_reference_file('water'))
-        self.lbl_water = QLabel("(not loaded)")
-        self.lbl_water.setStyleSheet("color: gray; font-size: 9px;")
-        water_layout.addWidget(self.btn_load_water)
-        water_layout.addWidget(self.lbl_water)
-        cal_layout.addLayout(water_layout)
-
-        # Ethanol file button
-        ethanol_layout = QHBoxLayout()
-        ethanol_layout.addWidget(QLabel("Ethanol:"))
-        self.btn_load_ethanol = QPushButton("Load")
-        self.btn_load_ethanol.clicked.connect(lambda: self.load_reference_file('ethanol'))
-        self.lbl_ethanol = QLabel("(not loaded)")
-        self.lbl_ethanol.setStyleSheet("color: gray; font-size: 9px;")
-        ethanol_layout.addWidget(self.btn_load_ethanol)
-        ethanol_layout.addWidget(self.lbl_ethanol)
-        cal_layout.addLayout(ethanol_layout)
-
-        # Isopropanol file button
-        iso_layout = QHBoxLayout()
-        iso_layout.addWidget(QLabel("Isopropanol:"))
-        self.btn_load_iso = QPushButton("Load")
-        self.btn_load_iso.clicked.connect(lambda: self.load_reference_file('isopropanol'))
-        self.lbl_iso = QLabel("(not loaded)")
-        self.lbl_iso.setStyleSheet("color: gray; font-size: 9px;")
-        iso_layout.addWidget(self.btn_load_iso)
-        iso_layout.addWidget(self.lbl_iso)
-        cal_layout.addLayout(iso_layout)
-
-        # Calibrate button
-        self.btn_calibrate = QPushButton("Perform Calibration")
-        self.btn_calibrate.clicked.connect(self.perform_calibration)
-        self.btn_calibrate.setStyleSheet("font-weight: bold; background-color: #4CAF50; color: white;")
-        cal_layout.addWidget(self.btn_calibrate)
-
-        # Save/Load calibration
-        cal_buttons_layout = QHBoxLayout()
-        self.btn_save_cal = QPushButton("Save Cal")
-        self.btn_save_cal.clicked.connect(self.save_calibration)
-        self.btn_load_cal = QPushButton("Load Cal")
-        self.btn_load_cal.clicked.connect(self.load_calibration)
-        cal_buttons_layout.addWidget(self.btn_save_cal)
-        cal_buttons_layout.addWidget(self.btn_load_cal)
-        cal_layout.addLayout(cal_buttons_layout)
-
-        left_layout.addWidget(cal_group)
 
         # Add stretch to push everything to top
         left_layout.addStretch()
@@ -440,7 +419,9 @@ class S1PMainWindow(QMainWindow):
         
         if file_path:
             self.current_directory = Path(file_path).parent
-            data_file = self.data_manager.add_file(Path(file_path))
+            # Use current unwrap_phase setting
+            unwrap_phase = self.unwrap_phase_check.isChecked()
+            data_file = self.data_manager.add_file(Path(file_path), unwrap_phase=unwrap_phase)
             
             if data_file:
                 # Add to list with checkbox
@@ -457,8 +438,65 @@ class S1PMainWindow(QMainWindow):
                 
                 # Update frequency range to encompass all files
                 self.update_frequency_range()
+                # Reapply current frequency filter to new file
+                self.reapply_frequency_filter()
                 self.update_plot()
                 self.update_statistics()
+    
+    def add_measurements_from_database(self, measurements):
+        """
+        Add measurements from the database browser
+        
+        Args:
+            measurements: List of ((name, filepath, description), compound) tuples
+        """
+        for measurement_data, compound in measurements:
+            name, filepath, description = measurement_data
+            
+            # Find the corresponding measurement object to get concentration
+            measurement_obj = None
+            for m in compound.measurements:
+                if compound.get_measurement_file_path(m) == filepath:
+                    measurement_obj = m
+                    break
+            
+            # Extract concentration if available
+            concentration = None
+            if measurement_obj and measurement_obj.concentration:
+                concentration = measurement_obj.concentration
+            
+            # Use current unwrap_phase setting
+            unwrap_phase = self.unwrap_phase_check.isChecked()
+            
+            # Add file with metadata
+            data_file = self.data_manager.add_file(
+                filepath, 
+                name,
+                chemical_name=compound.chemical_name,
+                concentration=concentration,
+                unwrap_phase=unwrap_phase
+            )
+            
+            if data_file:
+                # Add to list with checkbox
+                item = QListWidgetItem(f"{name}")
+                item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+                item.setCheckState(Qt.Checked)
+                item.setToolTip(description)  # Show full description on hover
+                
+                # Assign color
+                color_idx = len(self.data_manager.files) - 1
+                data_file.color = PLOT_COLORS[color_idx % len(PLOT_COLORS)]
+                item.setForeground(QColor(data_file.color))
+                
+                self.file_list.addItem(item)
+        
+        # Update UI
+        self.update_frequency_range()
+        # Reapply current frequency filter to newly added files
+        self.reapply_frequency_filter()
+        self.update_plot()
+        self.update_statistics()
     
     def remove_file(self):
         """Remove selected files"""
@@ -524,6 +562,38 @@ class S1PMainWindow(QMainWindow):
         freq_max = self.freq_max_spin.value() * 1e6
         
         self.data_manager.apply_frequency_filter_all(freq_min, freq_max)
+        self.update_plot()
+        self.update_statistics()
+    
+    def reapply_frequency_filter(self):
+        """Reapply the current frequency filter selection"""
+        range_key = self.range_combo.currentData()
+        
+        if range_key == 'custom':
+            freq_min = self.freq_min_spin.value() * 1e6  # Convert MHz to Hz
+            freq_max = self.freq_max_spin.value() * 1e6
+            self.data_manager.apply_frequency_filter_all(freq_min, freq_max)
+        else:
+            freq_min, freq_max, _ = FREQ_RANGES[range_key]
+            
+            if freq_max == float('inf'):
+                # Full range
+                min_f, max_f = self.data_manager.get_global_frequency_range()
+                self.data_manager.apply_frequency_filter_all(min_f, max_f)
+            else:
+                self.data_manager.apply_frequency_filter_all(freq_min, freq_max)
+    
+    def on_unwrap_phase_changed(self):
+        """Handle phase unwrapping toggle change"""
+        unwrap_phase = self.unwrap_phase_check.isChecked()
+        
+        # Reload all files with new unwrap setting
+        self.data_manager.reload_all_with_unwrap(unwrap_phase)
+        
+        # Reapply current frequency filter
+        self.reapply_frequency_filter()
+        
+        # Update the plot and statistics
         self.update_plot()
         self.update_statistics()
     
@@ -595,18 +665,21 @@ class S1PMainWindow(QMainWindow):
 
             # Plot data line if requested
             if show_data_lines:
+                # Use chemical name with concentration if available, otherwise use file name
+                plot_label = file.get_plot_label()
+                
                 # Plot with appropriate scale and capture line
                 if log_x and log_y:
-                    line, = self.canvas.axes.loglog(freq_ghz, values_valid, label=file.name,
+                    line, = self.canvas.axes.loglog(freq_ghz, values_valid, label=plot_label,
                                                     color=file.color, linewidth=2)
                 elif log_x:
-                    line, = self.canvas.axes.semilogx(freq_ghz, values_valid, label=file.name,
+                    line, = self.canvas.axes.semilogx(freq_ghz, values_valid, label=plot_label,
                                                      color=file.color, linewidth=2)
                 elif log_y:
-                    line, = self.canvas.axes.semilogy(freq_ghz, values_valid, label=file.name,
+                    line, = self.canvas.axes.semilogy(freq_ghz, values_valid, label=plot_label,
                                                      color=file.color, linewidth=2)
                 else:
-                    line, = self.canvas.axes.plot(freq_ghz, values_valid, label=file.name,
+                    line, = self.canvas.axes.plot(freq_ghz, values_valid, label=plot_label,
                                                  color=file.color, linewidth=2)
 
                 # Store for hover and additional plotting
@@ -625,7 +698,10 @@ class S1PMainWindow(QMainWindow):
                 # Polynomial fit in GHz
                 coeffs = np.polyfit(freq_ghz, values_valid, poly_order)
                 trend = np.polyval(coeffs, freq_ghz)
-                trend_label = f"{file.name} (poly{poly_order})" if show_data_lines else f"{file.name}"
+                
+                # Use chemical name with concentration for trendline label too
+                plot_label = file.get_plot_label()
+                trend_label = f"{plot_label} (poly{poly_order})" if show_data_lines else plot_label
                 trend_line, = self.canvas.axes.plot(freq_ghz, trend, linestyle='--',
                                                     color=file.color, alpha=0.7, label=trend_label)
 
@@ -746,117 +822,43 @@ class S1PMainWindow(QMainWindow):
                 'cole': cole_params
             })
 
-        # Create comparison table
-        stats_html = "<html><body style='font-family: Arial, sans-serif; font-size: 9pt;'>"
-        stats_html += f"<h4 style='margin: 5px 0;'>Trendline Derivatives & Cole-Cole Parameters</h4>"
-        stats_html += f"<p style='margin: 5px 0; font-size: 8pt;'>Metric: {metric_label}</p>"
+        # Create comparison table with cleaner design
+        stats_html = "<html><body style='font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; font-size: 9pt;'>"
+        stats_html += f"<h4 style='margin: 5px 0; color: #333;'>Compound Comparison</h4>"
+        stats_html += f"<p style='margin: 5px 0 10px 0; font-size: 8pt; color: #666;'>Metric: <b>{metric_label}</b></p>"
 
-        # Create comparison table with compounds as columns
-        stats_html += "<table border='1' cellpadding='4' cellspacing='0' style='font-size: 8pt; width: 100%;'>"
+        # Create table with better styling
+        stats_html += "<table cellpadding='6' cellspacing='0' style='font-size: 8pt; width: 100%; border-collapse: collapse;'>"
 
-        # Header row
-        stats_html += "<tr style='background-color: #f0f0f0;'>"
-        stats_html += "<th style='min-width: 80px;'><b>Parameter</b></th>"
+        # Header row with compound names (use chemical name with concentration if available)
+        stats_html += "<tr style='border-bottom: 2px solid #ddd;'>"
+        stats_html += "<th style='text-align: left; padding: 8px; background: #f8f9fa; font-weight: 600;'>Compound</th>"
         for item in all_data:
             color = item['color']
-            name = item['name']
-            stats_html += f"<th style='background-color: {color}20; text-align: center; color: {color};'><b>{name}</b></th>"
+            # Use chemical name if available
+            file = item['file']
+            display_name = file.get_plot_label()
+            # Use more subtle colors
+            stats_html += f"<th style='padding: 8px; background: #f8f9fa; border-left: 3px solid {color}; font-weight: 600; color: #333;'>{display_name}</th>"
         stats_html += "</tr>"
 
-        # Row: Trendline Slope (Derivative)
-        stats_html += "<tr>"
-        stats_html += "<td style='font-weight: bold;'>Slope (/GHz)</td>"
-        for item in all_data:
-            slope = item['slope']
-            slope_str = f"{slope:.3e}" if np.isfinite(slope) else "N/A"
-            stats_html += f"<td style='text-align: right;'>{slope_str}</td>"
-        stats_html += "</tr>"
+        # Statistics rows - flipped orientation
+        stats_rows = [
+            ('Slope (/GHz)', lambda item: item['slope'], '.3e'),
+            ('Mean', lambda item: item['stats'].get('mean', np.nan), '.3e'),
+            ('Std Dev', lambda item: item['stats'].get('std', np.nan), '.3e'),
+            ('Min', lambda item: item['stats'].get('min', np.nan), '.3e'),
+            ('Max', lambda item: item['stats'].get('max', np.nan), '.3e'),
+        ]
 
-        # Row: Mean
-        stats_html += "<tr style='background-color: #f9f9f9;'>"
-        stats_html += "<td style='font-weight: bold;'>Mean</td>"
-        for item in all_data:
-            mean = item['stats'].get('mean', np.nan)
-            mean_str = f"{mean:.3e}" if np.isfinite(mean) else "N/A"
-            stats_html += f"<td style='text-align: right;'>{mean_str}</td>"
-        stats_html += "</tr>"
-
-        # Row: Std Dev
-        stats_html += "<tr>"
-        stats_html += "<td style='font-weight: bold;'>Std Dev</td>"
-        for item in all_data:
-            std = item['stats'].get('std', np.nan)
-            std_str = f"{std:.3e}" if np.isfinite(std) else "N/A"
-            stats_html += f"<td style='text-align: right;'>{std_str}</td>"
-        stats_html += "</tr>"
-
-        # Row: Min
-        stats_html += "<tr style='background-color: #f9f9f9;'>"
-        stats_html += "<td style='font-weight: bold;'>Min</td>"
-        for item in all_data:
-            min_val = item['stats'].get('min', np.nan)
-            min_str = f"{min_val:.3e}" if np.isfinite(min_val) else "N/A"
-            stats_html += f"<td style='text-align: right;'>{min_str}</td>"
-        stats_html += "</tr>"
-
-        # Row: Max
-        stats_html += "<tr>"
-        stats_html += "<td style='font-weight: bold;'>Max</td>"
-        for item in all_data:
-            max_val = item['stats'].get('max', np.nan)
-            max_str = f"{max_val:.3e}" if np.isfinite(max_val) else "N/A"
-            stats_html += f"<td style='text-align: right;'>{max_str}</td>"
-        stats_html += "</tr>"
-
-        # Cole-Cole parameters (if available)
-        if any(item['cole'] for item in all_data):
-            stats_html += "<tr style='border-top: 2px solid #ccc;'>"
-            stats_html += "<td colspan='{0}' style='font-weight: bold; background-color: #e8f4f8;'>Cole-Cole Parameters</td>".format(len(all_data) + 1)
-            stats_html += "</tr>"
-
-            # ε_s (Static Permittivity)
-            stats_html += "<tr style='background-color: #f9f9f9;'>"
-            stats_html += "<td style='font-weight: bold;'>ε_s (Static)</td>"
+        for idx, (label, getter, fmt) in enumerate(stats_rows):
+            bg_color = '#ffffff' if idx % 2 == 0 else '#f8f9fa'
+            stats_html += f"<tr style='background: {bg_color}; border-bottom: 1px solid #eee;'>"
+            stats_html += f"<td style='padding: 6px; font-weight: 500; color: #555;'>{label}</td>"
             for item in all_data:
-                eps_s = item['cole'].get('epsilon_s', np.nan)
-                eps_s_str = f"{eps_s:.3f}" if np.isfinite(eps_s) else "N/A"
-                stats_html += f"<td style='text-align: right;'>{eps_s_str}</td>"
-            stats_html += "</tr>"
-
-            # ε_∞ (Infinite Freq Permittivity)
-            stats_html += "<tr>"
-            stats_html += "<td style='font-weight: bold;'>ε_∞ (∞ freq)</td>"
-            for item in all_data:
-                eps_inf = item['cole'].get('epsilon_inf', np.nan)
-                eps_inf_str = f"{eps_inf:.3f}" if np.isfinite(eps_inf) else "N/A"
-                stats_html += f"<td style='text-align: right;'>{eps_inf_str}</td>"
-            stats_html += "</tr>"
-
-            # Δε (Relaxation Strength)
-            stats_html += "<tr style='background-color: #f9f9f9;'>"
-            stats_html += "<td style='font-weight: bold;'>Δε (Strength)</td>"
-            for item in all_data:
-                delta_eps = item['cole'].get('relaxation_strength', np.nan)
-                delta_eps_str = f"{delta_eps:.3f}" if np.isfinite(delta_eps) else "N/A"
-                stats_html += f"<td style='text-align: right;'>{delta_eps_str}</td>"
-            stats_html += "</tr>"
-
-            # Max Loss (ε'')
-            stats_html += "<tr>"
-            stats_html += "<td style='font-weight: bold;'>Max ε''</td>"
-            for item in all_data:
-                max_loss = item['cole'].get('max_loss', np.nan)
-                max_loss_str = f"{max_loss:.3e}" if np.isfinite(max_loss) else "N/A"
-                stats_html += f"<td style='text-align: right;'>{max_loss_str}</td>"
-            stats_html += "</tr>"
-
-            # Loss Tangent
-            stats_html += "<tr style='background-color: #f9f9f9;'>"
-            stats_html += "<td style='font-weight: bold;'>tan(δ) (Loss)</td>"
-            for item in all_data:
-                loss_tan = item['cole'].get('loss_tangent', np.nan)
-                loss_tan_str = f"{loss_tan:.3e}" if np.isfinite(loss_tan) else "N/A"
-                stats_html += f"<td style='text-align: right;'>{loss_tan_str}</td>"
+                value = getter(item)
+                value_str = f"{value:{fmt}}" if np.isfinite(value) else "—"
+                stats_html += f"<td style='padding: 6px; text-align: right; font-family: monospace; color: #333;'>{value_str}</td>"
             stats_html += "</tr>"
 
         stats_html += "</table>"
@@ -881,14 +883,15 @@ class S1PMainWindow(QMainWindow):
 
         # Create tab-separated table
         lines = []
-        lines.append(f"Trendline Derivatives & Cole-Cole Parameters")
+        lines.append(f"Compound Statistics")
         lines.append(f"Metric: {metric_label}")
         lines.append("")
 
-        # Header row
+        # Header row - use chemical names with concentration
         header = ["Parameter"]
         for item in all_data:
-            header.append(item['name'])
+            file = item['file']
+            header.append(file.get_plot_label())
         lines.append("\t".join(header))
 
         # Data rows
@@ -905,29 +908,6 @@ class S1PMainWindow(QMainWindow):
             for item in all_data:
                 row.append(getter(item))
             lines.append("\t".join(row))
-
-        # Cole-Cole parameters
-        if any(item['cole'] for item in all_data):
-            lines.append("")
-            lines.append("Cole-Cole Parameters")
-
-            cole_params = [
-                ('ε_s (Static)', 'epsilon_s', '.3f'),
-                ('ε_∞ (∞ freq)', 'epsilon_inf', '.3f'),
-                ('Δε (Strength)', 'relaxation_strength', '.3f'),
-                ('Max ε\'\'', 'max_loss', '.3e'),
-                ('tan(δ) (Loss)', 'loss_tangent', '.3e'),
-            ]
-
-            for param_name, param_key, fmt in cole_params:
-                row = [param_name]
-                for item in all_data:
-                    value = item['cole'].get(param_key, np.nan)
-                    if np.isfinite(value):
-                        row.append(f"{value:{fmt}}")
-                    else:
-                        row.append("N/A")
-                lines.append("\t".join(row))
 
         # Copy to clipboard
         text = "\n".join(lines)
@@ -959,14 +939,15 @@ class S1PMainWindow(QMainWindow):
                 writer = csv.writer(f)
 
                 # Header info
-                writer.writerow(["Trendline Derivatives & Cole-Cole Parameters"])
+                writer.writerow(["Compound Statistics"])
                 writer.writerow([f"Metric: {metric_label}"])
                 writer.writerow([])
 
-                # Header row
+                # Header row - use chemical names with concentration
                 header = ["Parameter"]
                 for item in all_data:
-                    header.append(item['name'])
+                    file = item['file']
+                    header.append(file.get_plot_label())
                 writer.writerow(header)
 
                 # Data rows
@@ -983,29 +964,6 @@ class S1PMainWindow(QMainWindow):
                     for item in all_data:
                         row.append(getter(item))
                     writer.writerow(row)
-
-                # Cole-Cole parameters
-                if any(item['cole'] for item in all_data):
-                    writer.writerow([])
-                    writer.writerow(["Cole-Cole Parameters"])
-
-                    cole_params = [
-                        ('ε_s (Static)', 'epsilon_s', '.3f'),
-                        ('ε_∞ (∞ freq)', 'epsilon_inf', '.3f'),
-                        ('Δε (Strength)', 'relaxation_strength', '.3f'),
-                        ('Max ε\'\'', 'max_loss', '.3e'),
-                        ('tan(δ) (Loss)', 'loss_tangent', '.3e'),
-                    ]
-
-                    for param_name, param_key, fmt in cole_params:
-                        row = [param_name]
-                        for item in all_data:
-                            value = item['cole'].get(param_key, np.nan)
-                            if np.isfinite(value):
-                                row.append(f"{value:{fmt}}")
-                            else:
-                                row.append("N/A")
-                        writer.writerow(row)
 
             self.current_directory = Path(file_path).parent
             QMessageBox.information(self, "Success", f"Statistics exported to:\n{file_path}")
@@ -1034,14 +992,18 @@ class S1PMainWindow(QMainWindow):
 
             # Build export data structure
             export_data = {
-                'title': 'Trendline Derivatives & Cole-Cole Parameters',
+                'title': 'Compound Statistics',
                 'metric': metric_label,
                 'compounds': []
             }
 
             for item in all_data:
+                # Use chemical name with concentration if available
+                file = item['file']
+                display_name = file.get_plot_label()
+                
                 compound_data = {
-                    'name': item['name'],
+                    'name': display_name,
                     'color': item['color'],
                     'slope': float(item['slope']) if np.isfinite(item['slope']) else None,
                     'statistics': {
@@ -1055,16 +1017,6 @@ class S1PMainWindow(QMainWindow):
                     }
                 }
 
-                # Add Cole-Cole parameters if available
-                if item['cole']:
-                    compound_data['cole_cole'] = {
-                        'epsilon_s': float(item['cole'].get('epsilon_s', np.nan)) if np.isfinite(item['cole'].get('epsilon_s', np.nan)) else None,
-                        'epsilon_inf': float(item['cole'].get('epsilon_inf', np.nan)) if np.isfinite(item['cole'].get('epsilon_inf', np.nan)) else None,
-                        'relaxation_strength': float(item['cole'].get('relaxation_strength', np.nan)) if np.isfinite(item['cole'].get('relaxation_strength', np.nan)) else None,
-                        'max_loss': float(item['cole'].get('max_loss', np.nan)) if np.isfinite(item['cole'].get('max_loss', np.nan)) else None,
-                        'loss_tangent': float(item['cole'].get('loss_tangent', np.nan)) if np.isfinite(item['cole'].get('loss_tangent', np.nan)) else None,
-                    }
-
                 export_data['compounds'].append(compound_data)
 
             # Write JSON
@@ -1075,159 +1027,6 @@ class S1PMainWindow(QMainWindow):
             QMessageBox.information(self, "Success", f"Statistics exported to:\n{file_path}")
         except Exception as e:
             QMessageBox.critical(self, "Export Error", f"Failed to export JSON:\n{str(e)}")
-
-    def load_reference_file(self, liquid_type: str):
-        """Load a reference liquid S1P file"""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            f"Select {liquid_type.capitalize()} S1P File",
-            str(self.current_directory),
-            "S1P Files (*.s1p);;All Files (*)"
-        )
-
-        if file_path:
-            self.current_directory = Path(file_path).parent
-            self.ref_files[liquid_type] = file_path
-
-            # Update label
-            filename = Path(file_path).name
-            label_map = {
-                'water': self.lbl_water,
-                'ethanol': self.lbl_ethanol,
-                'isopropanol': self.lbl_iso
-            }
-            label_map[liquid_type].setText(filename)
-            label_map[liquid_type].setStyleSheet("color: green; font-size: 9px;")
-
-    def perform_calibration(self):
-        """Perform probe calibration with loaded reference files"""
-        # Check if all files are loaded
-        required = {'water', 'ethanol', 'isopropanol'}
-        if not required.issubset(self.ref_files.keys()):
-            missing = required - set(self.ref_files.keys())
-            QMessageBox.warning(
-                self,
-                "Missing Files",
-                f"Please load S1P files for: {', '.join(missing)}"
-            )
-            return
-
-        try:
-            self.cal_status_label.setText("Status: Calibrating...")
-            self.cal_status_label.setStyleSheet("color: orange; font-weight: bold;")
-            QApplication.processEvents()
-
-            # Load reference files
-            import skrf as rf
-
-            s11_measurements = {}
-            for liquid in ['water', 'ethanol', 'isopropanol']:
-                network = rf.Network(str(self.ref_files[liquid]))
-                s11_measurements[liquid] = {
-                    'frequency': network.f,
-                    's11_complex': network.s[:, 0, 0]
-                }
-
-            # Load reference data
-            reference_data = self.calibration.load_reference_data(temperature=25.0)
-
-            # Perform calibration
-            if self.calibration.calibrate(s11_measurements, reference_data):
-                # Update data manager with calibration
-                self.data_manager.set_calibration(self.calibration)
-
-                self.cal_status_label.setText("Status: ✓ Calibrated (25°C)")
-                self.cal_status_label.setStyleSheet("color: green; font-weight: bold;")
-
-                # Reload all files to apply calibration
-                for file in self.data_manager.get_active_files():
-                    file.load()
-
-                self.update_plot()
-                self.update_statistics()
-
-                QMessageBox.information(
-                    self,
-                    "Success",
-                    "Calibration completed successfully!\n\n"
-                    "All loaded files will now use the calibration."
-                )
-            else:
-                self.cal_status_label.setText("Status: Calibration failed")
-                self.cal_status_label.setStyleSheet("color: red; font-weight: bold;")
-                QMessageBox.critical(
-                    self,
-                    "Error",
-                    "Calibration failed. Check that all S1P files are valid and have matching frequency points."
-                )
-
-        except Exception as e:
-            self.cal_status_label.setText("Status: Error")
-            self.cal_status_label.setStyleSheet("color: red; font-weight: bold;")
-            QMessageBox.critical(self, "Error", f"Calibration error:\n{str(e)}")
-
-    def save_calibration(self):
-        """Save current calibration to file"""
-        if not self.calibration.is_calibrated():
-            QMessageBox.warning(
-                self,
-                "No Calibration",
-                "Please perform calibration first."
-            )
-            return
-
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save Calibration",
-            str(self.current_directory / "probe_calibration.pkl"),
-            "Pickle Files (*.pkl);;All Files (*)"
-        )
-
-        if file_path:
-            if self.calibration.save(file_path):
-                self.current_directory = Path(file_path).parent
-                QMessageBox.information(
-                    self,
-                    "Success",
-                    f"Calibration saved to:\n{file_path}"
-                )
-
-    def load_calibration(self):
-        """Load a previously saved calibration"""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Load Calibration",
-            str(self.current_directory),
-            "Pickle Files (*.pkl);;All Files (*)"
-        )
-
-        if file_path:
-            try:
-                loaded_cal = ProbeCalibration.load(file_path)
-                if loaded_cal and loaded_cal.is_calibrated():
-                    self.calibration = loaded_cal
-                    self.data_manager.set_calibration(self.calibration)
-                    self.current_directory = Path(file_path).parent
-
-                    self.cal_status_label.setText("Status: ✓ Calibrated (loaded)")
-                    self.cal_status_label.setStyleSheet("color: green; font-weight: bold;")
-
-                    # Reload all files to apply calibration
-                    for file in self.data_manager.get_active_files():
-                        file.load()
-
-                    self.update_plot()
-                    self.update_statistics()
-
-                    QMessageBox.information(
-                        self,
-                        "Success",
-                        f"Calibration loaded from:\n{file_path}"
-                    )
-                else:
-                    QMessageBox.critical(self, "Error", "Invalid or empty calibration file.")
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to load calibration:\n{str(e)}")
 
 
 def main():

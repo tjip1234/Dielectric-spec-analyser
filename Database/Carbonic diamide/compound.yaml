@@ -1,0 +1,18 @@
+compound:
+  common_name: Urea
+  chemical_name: Carbonic diamide
+  cas_number: 57-13-6
+  molecular_weight: 60.06
+  functional_groups: [amide, carbonyl]
+  chemical_formula: CH4N2O
+
+measurements:
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      mass_g: 7.1
+      volume_ml: 10.0
+      percent_w_v: 71.0
+    data_file: Carbonic-diamide-71%.s1p

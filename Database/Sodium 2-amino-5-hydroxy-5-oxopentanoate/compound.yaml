@@ -1,0 +1,26 @@
+compound:
+  common_name: MSG
+  chemical_name: Sodium 2-amino-5-hydroxy-5-oxopentanoate
+  cas_number: 142-47-2
+  molecular_weight: 169.11
+  functional_groups: [carboxylate, amino, sodium_salt]
+  chemical_formula: C5H8NNaO4
+
+measurements:
+  - date: 2025-11-19
+    temperature_c: 16.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      mass_g: 3.0
+      volume_ml: 10.0
+    data_file: 3g-msg-DI.s1p
+  - date: 2025-11-19
+    temperature_c: 16.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      mass_g: 1.5
+      volume_ml: 10.0
+    data_file: 1.5g-msg-DI.s1p
+  

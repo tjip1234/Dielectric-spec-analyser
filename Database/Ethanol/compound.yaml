@@ -1,0 +1,17 @@
+compound:
+  common_name: Ethanol
+  chemical_name: Ethanol
+  cas_number: 64-17-5
+  molecular_weight: 46.07
+  functional_groups: [alcohol, hydroxyl]
+  chemical_formula: C2H6O
+
+measurements:
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: null
+    is_pure: false
+    concentration:
+      volume_ml: 10.0
+      volume_percent: 96.0
+    data_file: ethanol.s1p

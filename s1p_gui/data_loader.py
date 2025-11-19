@@ -9,10 +9,67 @@ import skrf as rf
 from .formulas import calculate_dielectric_properties, filter_frequency_range
 
 
+def _format_concentration(conc: Optional[Dict]) -> Optional[str]:
+    """Format a concentration dict into a concise string for plot labels.
+
+    Mirrors the logic used in database_loader to handle different key names
+    and key orders.
+    """
+    if not conc:
+        return None
+
+    # Try volume_percent first (most specific)
+    if 'volume_percent' in conc and conc['volume_percent'] is not None:
+        try:
+            vp = float(conc['volume_percent'])
+            return f"{vp:g}% v/v"
+        except Exception:
+            return f"{conc['volume_percent']}% v/v"
+    
+    # Try generic percent
+    if 'percent' in conc and conc['percent'] is not None:
+        try:
+            p = float(conc['percent'])
+            return f"{p:g}%"
+        except Exception:
+            return f"{conc['percent']}%"
+
+    # Try mass/volume combination
+    mass_keys = ('mass_g', 'mass', 'g')
+    vol_keys = ('volume_ml', 'volume', 'vol_ml', 'ml')
+
+    mass = None
+    vol = None
+    for k in mass_keys:
+        if k in conc and conc[k] is not None:
+            mass = conc[k]
+            break
+    for k in vol_keys:
+        if k in conc and conc[k] is not None:
+            vol = conc[k]
+            break
+
+    if mass is not None and vol is not None:
+        try:
+            m = float(mass)
+            v = float(vol)
+            return f"{m:g}g/{v:g}ml"
+        except Exception:
+            return f"{mass}g/{vol}ml"
+
+    # If the concentration is already a string
+    if isinstance(conc, str):
+        return conc
+
+    return None
+
+
 class S1PDataFile:
     """Represents a single S1P data file with computed properties"""
 
-    def __init__(self, filepath: Path, name: Optional[str] = None, calibration=None):
+    def __init__(self, filepath: Path, name: Optional[str] = None, calibration=None, 
+                 chemical_name: Optional[str] = None, concentration: Optional[Dict] = None,
+                 unwrap_phase: bool = True):
         """
         Initialize S1P data file
 
@@ -20,6 +77,9 @@ class S1PDataFile:
             filepath: Path to .s1p file
             name: Display name (defaults to filename stem)
             calibration: ProbeCalibration object (optional)
+            chemical_name: Chemical name of the compound (optional)
+            concentration: Concentration dict with mass_g and volume_ml (optional)
+            unwrap_phase: Whether to unwrap phase discontinuities (default True)
         """
         self.filepath = Path(filepath)
         self.name = name or self.filepath.stem
@@ -29,12 +89,18 @@ class S1PDataFile:
         self.is_loaded = False
         self.color = None
         self.calibration = calibration
+        self.chemical_name = chemical_name
+        self.concentration = concentration
+        self.unwrap_phase = unwrap_phase
 
-    def load(self) -> bool:
+    def load(self, unwrap_phase: Optional[bool] = None) -> bool:
         """
         Load S1P file and calculate properties
 
         Uses calibration if available, otherwise falls back to simplified model.
+
+        Args:
+            unwrap_phase: Override unwrap_phase setting for this load (optional)
 
         Returns:
             True if successful, False otherwise
@@ -46,7 +112,10 @@ class S1PDataFile:
             freq = self.network.f
             s11 = self.network.s[:, 0, 0]
 
-            self.full_data = calculate_dielectric_properties(s11, freq, self.calibration)
+            # Use override if provided, otherwise use instance setting
+            use_unwrap = unwrap_phase if unwrap_phase is not None else self.unwrap_phase
+            
+            self.full_data = calculate_dielectric_properties(s11, freq, self.calibration, use_unwrap)
             self.filtered_data = self.full_data.copy()
             self.is_loaded = True
             return True
@@ -104,6 +173,16 @@ class S1PDataFile:
         freq = self.filtered_data['frequency']
         return (freq[0], freq[-1])
     
+    def get_plot_label(self) -> str:
+        """Get label for plot legend with chemical name and concentration if available"""
+        if self.chemical_name:
+            label = self.chemical_name
+            conc_str = _format_concentration(self.concentration)
+            if conc_str:
+                label += f" ({conc_str})"
+            return label
+        return self.name
+    
     def __repr__(self):
         status = "loaded" if self.is_loaded else "not loaded"
         return f"S1PDataFile('{self.name}', {status})"
@@ -129,18 +208,24 @@ class DataManager:
         for file in self.files:
             file.set_calibration(calibration)
 
-    def add_file(self, filepath: Path, name: Optional[str] = None) -> Optional[S1PDataFile]:
+    def add_file(self, filepath: Path, name: Optional[str] = None, 
+                 chemical_name: Optional[str] = None, 
+                 concentration: Optional[Dict] = None,
+                 unwrap_phase: bool = True) -> Optional[S1PDataFile]:
         """
         Add and load a new S1P file
 
         Args:
             filepath: Path to .s1p file
             name: Optional display name
+            chemical_name: Optional chemical name for plot labels
+            concentration: Optional concentration dict
+            unwrap_phase: Whether to unwrap phase discontinuities (default True)
 
         Returns:
             S1PDataFile object if successful, None otherwise
         """
-        data_file = S1PDataFile(filepath, name, self.calibration)
+        data_file = S1PDataFile(filepath, name, self.calibration, chemical_name, concentration, unwrap_phase)
 
         if data_file.load():
             self.files.append(data_file)
@@ -183,6 +268,17 @@ class DataManager:
         """Apply frequency filter to all files"""
         for file in self.files:
             file.apply_frequency_filter(freq_min, freq_max)
+    
+    def reload_all_with_unwrap(self, unwrap_phase: bool):
+        """
+        Reload all files with new phase unwrapping setting
+        
+        Args:
+            unwrap_phase: Whether to unwrap phase discontinuities
+        """
+        for file in self.files:
+            file.unwrap_phase = unwrap_phase
+            file.load()
     
     def get_global_frequency_range(self) -> tuple:
         """Get the global frequency range across all files"""

@@ -1,0 +1,21 @@
+compound:
+  common_name: Deionized water
+  chemical_name: Water
+  cas_number: 7732-18-5
+  molecular_weight: 18.015
+  functional_groups: [hydroxyl]
+  chemical_formula: H2O
+
+measurements:
+  - date: 2025-10-28
+    temperature_c: 18.0
+    solvent: null
+    is_pure: true
+    notes: First measurement
+    data_file: DI-water.s1p
+  - date: 2025-11-19
+    temperature_c: 16.0
+    solvent: null
+    is_pure: true
+    notes: Second measurement
+    data_file: DI-water2.s1p

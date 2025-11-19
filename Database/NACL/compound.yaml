@@ -1,0 +1,44 @@
+compound:
+  common_name: Table salt
+  chemical_name: Sodium chloride
+  cas_number: 7647-14-5
+  molecular_weight: 58.44
+  functional_groups: [ionic, halide, alkali_metal]
+  chemical_formula: NaCl
+
+measurements:
+  - date: 2025-11-19
+    temperature_c: 18.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      volume_ml: 10.0
+      mass_g: 0.05
+    data_file: 0.5%.s1p
+  
+  - date: 2025-11-19
+    temperature_c: 18.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      volume_ml: 10.0
+      mass_g: 0.1
+    data_file: 1%.s1p
+  
+  - date: 2025-11-19
+    temperature_c: 18.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      volume_ml: 10.0
+      mass_g: 0.2
+    data_file: 2%.s1p
+  
+  - date: 2025-11-19
+    temperature_c: 18.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      volume_ml: 10.0
+      mass_g: 0.5
+    data_file: 5%.s1p

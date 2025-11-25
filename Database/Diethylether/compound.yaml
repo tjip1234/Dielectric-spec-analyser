@@ -1,0 +1,13 @@
+compound:
+  common_name: Diethyl ether
+  chemical_name: Ethoxyethane
+  cas_number: 60-29-7
+  molecular_weight: 74.12
+  functional_groups: [ether]
+  chemical_formula: C4H10O
+measurements:
+  - date: 2025-11-24
+    temperature_c: 18.0
+    solvent: null
+    is_pure: true
+    data_file: diethyl-ether.s1p

@@ -1,0 +1,13 @@
+compound:
+  common_name: o-Xylene
+  chemical_name: 1,2-Dimethylbenzene
+  cas_number: 95-47-6
+  molecular_weight: 106.17
+  functional_groups: [Aromatic]
+  chemical_formula: C8H10
+measurements:
+  - date: 2025-11-24
+    temperature_c: 18.0
+    solvent: null
+    is_pure: true
+    data_file: o-xylene.s1p

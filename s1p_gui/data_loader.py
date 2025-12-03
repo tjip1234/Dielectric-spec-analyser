@@ -69,7 +69,7 @@ class S1PDataFile:
 
     def __init__(self, filepath: Path, name: Optional[str] = None, calibration=None, 
                  chemical_name: Optional[str] = None, concentration: Optional[Dict] = None,
-                 unwrap_phase: bool = True):
+                 unwrap_phase: bool = True, temperature_c: Optional[float] = None):
         """
         Initialize S1P data file
 
@@ -80,6 +80,7 @@ class S1PDataFile:
             chemical_name: Chemical name of the compound (optional)
             concentration: Concentration dict with mass_g and volume_ml (optional)
             unwrap_phase: Whether to unwrap phase discontinuities (default True)
+            temperature_c: Temperature in Celsius (optional, for temperature series)
         """
         self.filepath = Path(filepath)
         self.name = name or self.filepath.stem
@@ -92,6 +93,7 @@ class S1PDataFile:
         self.chemical_name = chemical_name
         self.concentration = concentration
         self.unwrap_phase = unwrap_phase
+        self.temperature_c = temperature_c
 
     def load(self, unwrap_phase: Optional[bool] = None) -> bool:
         """
@@ -174,13 +176,21 @@ class S1PDataFile:
         return (freq[0], freq[-1])
     
     def get_plot_label(self) -> str:
-        """Get label for plot legend with chemical name and concentration if available"""
+        """Get label for plot legend with chemical name, concentration, and temperature if available"""
         if self.chemical_name:
             label = self.chemical_name
+            parts = []
             conc_str = _format_concentration(self.concentration)
             if conc_str:
-                label += f" ({conc_str})"
+                parts.append(conc_str)
+            if self.temperature_c is not None:
+                parts.append(f"{self.temperature_c}°C")
+            if parts:
+                label += f" ({', '.join(parts)})"
             return label
+        # If no chemical name but we have temperature, include it with the file name
+        if self.temperature_c is not None:
+            return f"{self.name} ({self.temperature_c}°C)"
         return self.name
     
     def __repr__(self):
@@ -211,7 +221,8 @@ class DataManager:
     def add_file(self, filepath: Path, name: Optional[str] = None, 
                  chemical_name: Optional[str] = None, 
                  concentration: Optional[Dict] = None,
-                 unwrap_phase: bool = True) -> Optional[S1PDataFile]:
+                 unwrap_phase: bool = True,
+                 temperature_c: Optional[float] = None) -> Optional[S1PDataFile]:
         """
         Add and load a new S1P file
 
@@ -221,11 +232,12 @@ class DataManager:
             chemical_name: Optional chemical name for plot labels
             concentration: Optional concentration dict
             unwrap_phase: Whether to unwrap phase discontinuities (default True)
+            temperature_c: Optional temperature in Celsius (for temperature series)
 
         Returns:
             S1PDataFile object if successful, None otherwise
         """
-        data_file = S1PDataFile(filepath, name, self.calibration, chemical_name, concentration, unwrap_phase)
+        data_file = S1PDataFile(filepath, name, self.calibration, chemical_name, concentration, unwrap_phase, temperature_c)
 
         if data_file.load():
             self.files.append(data_file)

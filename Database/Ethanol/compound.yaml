@@ -15,3 +15,11 @@ measurements:
       volume_ml: 10.0
       volume_percent: 96.0
     data_file: ethanol.s1p
+  - date: 2025-12-02
+    temperature_c: 12.0
+    solvent: null
+    is_pure: false
+    concentration:
+      volume_ml: 10.0
+      volume_percent: mystery
+    data_file: wine12.5%.s1p

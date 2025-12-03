@@ -1,0 +1,14 @@
+compound:
+  common_name: PHA plastic
+  chemical_name: Polyhydroxyalkanoate
+  cas_number: 29840-48-4
+  molecular_weight: 0.0  # Variable - polymer
+  functional_groups: [ester, polyester]
+  chemical_formula: (C4H6O2)n
+
+measurements:
+  - date: 2025-12-02
+    temperature_c: null
+    solvent: null
+    is_pure: true
+    data_file: PHA-plastic.s1p

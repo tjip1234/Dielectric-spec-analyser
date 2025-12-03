@@ -1,0 +1,14 @@
+compound:
+  common_name: PP+PE blend
+  chemical_name: Polypropylene-Polyethylene blend
+  cas_number: null  # Mixture
+  molecular_weight: 0.0  # Variable - polymer blend
+  functional_groups: [alkane, hydrocarbon]
+  chemical_formula: (C3H6)n + (C2H4)n
+
+measurements:
+  - date: 2025-12-02
+    temperature_c: null
+    solvent: null
+    is_pure: true
+    data_file: pp+pe1.s1p

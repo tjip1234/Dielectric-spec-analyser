@@ -453,7 +453,7 @@ class S1PMainWindow(QMainWindow):
         for measurement_data, compound in measurements:
             name, filepath, description = measurement_data
             
-            # Find the corresponding measurement object to get concentration
+            # Find the corresponding measurement object to get concentration and temperature
             measurement_obj = None
             for m in compound.measurements:
                 if compound.get_measurement_file_path(m) == filepath:
@@ -465,6 +465,11 @@ class S1PMainWindow(QMainWindow):
             if measurement_obj and measurement_obj.concentration:
                 concentration = measurement_obj.concentration
             
+            # Extract temperature if this is a temperature series
+            temperature_c = None
+            if compound.temperature_series and measurement_obj and measurement_obj.temperature_c is not None:
+                temperature_c = measurement_obj.temperature_c
+            
             # Use current unwrap_phase setting
             unwrap_phase = self.unwrap_phase_check.isChecked()
             
@@ -474,7 +479,8 @@ class S1PMainWindow(QMainWindow):
                 name,
                 chemical_name=compound.chemical_name,
                 concentration=concentration,
-                unwrap_phase=unwrap_phase
+                unwrap_phase=unwrap_phase,
+                temperature_c=temperature_c
             )
             
             if data_file:

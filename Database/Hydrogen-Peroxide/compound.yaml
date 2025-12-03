@@ -1,0 +1,17 @@
+compound:
+  common_name: Hydrogen-Peroxide
+  chemical_name: Hydrogen peroxide
+  cas_number: 7722-84-1
+  molecular_weight: 34.015
+  functional_groups: [peroxide, hydroxyl]
+  chemical_formula: H2O2
+
+measurements:
+  - date: 2025-11-27
+    temperature_c: 16.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      volume_ml: 20.0
+      volume_percent: 3.0
+    data_file: 3percent.s1p

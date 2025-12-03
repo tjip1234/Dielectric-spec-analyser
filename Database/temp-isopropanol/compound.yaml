@@ -1,0 +1,124 @@
+compound:
+  common_name: Isopropanol-temperature_series
+  chemical_name: Propan-2-ol
+  cas_number: 67-63-0
+  molecular_weight: 60.10
+  temperature_series: true
+  functional_groups: [alcohol, hydroxyl]
+  chemical_formula: C3H8O
+measurements:
+  - date: 2025-11-26
+    temperature_c: -14.0
+    solvent: null
+    is_pure: true
+    data_file: -14.s1p
+  - date: 2025-11-26
+    temperature_c: -13.0
+    solvent: null
+    is_pure: true
+    data_file: -13.s1p
+  - date: 2025-11-26
+    temperature_c: -12.0
+    solvent: null
+    is_pure: true
+    data_file: -12.s1p
+  - date: 2025-11-26
+    temperature_c: -11.0
+    solvent: null
+    is_pure: true
+    data_file: -11.s1p
+  - date: 2025-11-26
+    temperature_c: -10.0
+    solvent: null
+    is_pure: true
+    data_file: -10.s1p
+  - date: 2025-11-26
+    temperature_c: -9.0
+    solvent: null
+    is_pure: true
+    data_file: -9.s1p
+  - date: 2025-11-26
+    temperature_c: -8.0
+    solvent: null
+    is_pure: true
+    data_file: -8.s1p
+  - date: 2025-11-26
+    temperature_c: -7.0
+    solvent: null
+    is_pure: true
+    data_file: -7.s1p
+  - date: 2025-11-26
+    temperature_c: -6.0
+    solvent: null
+    is_pure: true
+    data_file: -6.s1p
+  - date: 2025-11-26
+    temperature_c: -5.0
+    solvent: null
+    is_pure: true
+    data_file: -5.s1p
+  - date: 2025-11-26
+    temperature_c: -4.0
+    solvent: null
+    is_pure: true
+    data_file: -4.s1p
+  - date: 2025-11-26
+    temperature_c: -3.0
+    solvent: null
+    is_pure: true
+    data_file: -3.s1p
+  - date: 2025-11-26
+    temperature_c: -2.0
+    solvent: null
+    is_pure: true
+    data_file: -2.s1p
+  - date: 2025-11-26
+    temperature_c: -1.0
+    solvent: null
+    is_pure: true
+    data_file: -1.s1p
+  - date: 2025-11-26
+    temperature_c: 0.0
+    solvent: null
+    is_pure: true
+    data_file: 0.s1p
+  - date: 2025-11-26
+    temperature_c: 1.0
+    solvent: null
+    is_pure: true
+    data_file: 1.s1p
+  - date: 2025-11-26
+    temperature_c: 2.0
+    solvent: null
+    is_pure: true
+    data_file: 2.s1p
+  - date: 2025-11-26
+    temperature_c: 3.0
+    solvent: null
+    is_pure: true
+    data_file: 3.s1p
+  - date: 2025-11-26
+    temperature_c: 4.0
+    solvent: null
+    is_pure: true
+    data_file: 4.s1p
+  - date: 2025-11-26
+    temperature_c: 5.0
+    solvent: null
+    is_pure: true
+    data_file: 5.s1p
+  - date: 2025-11-26
+    temperature_c: 6.0
+    solvent: null
+    is_pure: true
+    data_file: 6.s1p
+  - date: 2025-11-26
+    temperature_c: 7.0
+    solvent: null
+    is_pure: true
+    data_file: 7.s1p
+  - date: 2025-11-26
+    temperature_c: 8.0
+    solvent: null
+    is_pure: true
+    data_file: 8.s1p

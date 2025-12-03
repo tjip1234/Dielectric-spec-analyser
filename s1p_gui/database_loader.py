@@ -88,6 +88,7 @@ class Compound:
     functional_groups: List[str]
     chemical_formula: str
     measurements: List[Measurement]
+    temperature_series: bool = False
     
     def get_display_name(self) -> str:
         """Get a nice display name for the compound"""
@@ -166,7 +167,8 @@ def load_compound_yaml(yaml_path: Path) -> Optional[Compound]:
             molecular_weight=compound_data.get('molecular_weight', 0.0),
             functional_groups=compound_data.get('functional_groups', []),
             chemical_formula=compound_data.get('chemical_formula', ''),
-            measurements=measurements
+            measurements=measurements,
+            temperature_series=compound_data.get('temperature_series', False)
         )
         
         return compound

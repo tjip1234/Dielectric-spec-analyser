@@ -1,0 +1,40 @@
+compound:
+  common_name: Baking soda
+  chemical_name: Sodium bicarbonate
+  cas_number: 144-55-8
+  molecular_weight: 84.01
+  functional_groups: [ionic, carbonate, alkali_metal]
+  chemical_formula: NaHCO3
+  measurements:
+    - date: 2025-11-27
+      temperature_c: 18.0
+      solvent: DI water
+      is_pure: false
+      concentration:
+        volume_ml: 10.0
+        mass_g: 0.05
+      data_file: NaHCO3-0.05g.s1p
+    - date: 2025-11-27
+      temperature_c: 18.0
+      solvent: DI water
+      is_pure: false
+      concentration:
+        volume_ml: 10.0
+        mass_g: 0.1
+      data_file: NaHCO3-0.1g.s1p
+    - date: 2025-11-27
+      temperature_c: 18.0
+      solvent: DI water
+      is_pure: false
+      concentration:
+        volume_ml: 10.0
+        mass_g: 0.2
+      data_file: NaHCO3-0.2g.s1p
+    - date: 2025-11-27
+      temperature_c: 18.0
+      solvent: DI water
+      is_pure: false
+      concentration:
+        volume_ml: 10.0
+        mass_g: 0.5
+      data_file: NaHCO3-0.5g.s1p

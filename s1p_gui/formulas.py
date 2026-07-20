@@ -188,22 +188,45 @@ def calculate_mean_in_range(frequencies: np.ndarray,
 
 
 def calculate_statistics(data: Dict[str, np.ndarray], 
-                         metric: str = 'epsilon_double_prime') -> Dict[str, float]:
+                         metric: str = 'epsilon_double_prime',
+                         time_filter: tuple = None) -> Dict[str, float]:
     """
     Calculate comprehensive statistics for a given metric
     
     Args:
         data: Data dictionary containing frequencies and metrics
         metric: Which metric to analyze
+        time_filter: Optional tuple of (t_min, t_max) to filter IFFT data by time in ns
         
     Returns:
         Dictionary with statistical measures
     """
-    if data is None or metric not in data:
-        return {}
-    
-    freq = data['frequency']
-    values = data[metric]
+    if metric == 's11_ifft':
+        if data is None or 's11' not in data:
+            return {}
+        s11_comp = data['s11']
+        freq_vals = data['frequency']
+        if len(freq_vals) < 2:
+            return {}
+        df = freq_vals[1] - freq_vals[0]
+        window = np.blackman(len(s11_comp))
+        values = np.abs(np.fft.ifft(s11_comp * window))
+        freq = np.arange(len(freq_vals)) / (len(freq_vals) * df) * 1e9  # ns time acts as freq
+        
+        # Apply time filter if provided
+        if time_filter:
+            t_min, t_max = time_filter
+            time_mask = (freq >= t_min) & (freq <= t_max)
+            freq = freq[time_mask]
+            values = values[time_mask]
+            if len(freq) == 0:
+                return {}
+    else:
+        if data is None or metric not in data:
+            return {}
+        
+        freq = data['frequency']
+        values = data[metric]
     
     # Filter valid data
     valid_mask = np.isfinite(values)

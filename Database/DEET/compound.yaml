@@ -12,3 +12,22 @@ measurements:
     solvent: null
     is_pure: true
     data_file: DEET.s1p
+  - date: 2025-12-12
+    temperature_c: null
+    solvent: null
+    is_pure: true
+    notes: R-DEET
+    data_file: R-deet.s1p
+  - date: 2025-12-12
+    temperature_c: null
+    solvent: null
+    is_pure: true
+    notes: D-DEET
+    data_file: D-deet.s1p
+  - date: 2025-12-12
+    temperature_c: null
+    solvent: null
+    is_pure: true
+    notes: D-DEET2
+    data_file: D-deet2.s1p
+

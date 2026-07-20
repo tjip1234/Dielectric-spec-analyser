@@ -194,8 +194,13 @@ class S1PMainWindow(QMainWindow):
         self.metric_combo = QComboBox()
         for metric_key, metric_label in AVAILABLE_METRICS:
             self.metric_combo.addItem(metric_label, metric_key)
-        self.metric_combo.currentIndexChanged.connect(self.update_plot)
+        self.metric_combo.currentIndexChanged.connect(self.on_metric_changed)
         plot_layout.addWidget(self.metric_combo)
+        
+        # Button for Reverse Fourier Transform
+        self.btn_ifft = QPushButton("View Impulse Response (IFFT)")
+        self.btn_ifft.clicked.connect(self.view_ifft)
+        plot_layout.addWidget(self.btn_ifft)
         
         # Frequency range selection
         plot_layout.addWidget(QLabel("Frequency Range:"))
@@ -226,6 +231,35 @@ class S1PMainWindow(QMainWindow):
         custom_layout.addWidget(self.freq_max_spin)
         
         plot_layout.addLayout(custom_layout)
+        
+        # Time range selection for IFFT
+        self.time_range_widget = QWidget()
+        time_layout = QVBoxLayout()
+        time_layout.setContentsMargins(0, 0, 0, 0)
+        self.time_range_widget.setLayout(time_layout)
+        
+        time_layout.addWidget(QLabel("Time Range (ns):"))
+        
+        custom_time_layout = QHBoxLayout()
+        custom_time_layout.addWidget(QLabel("Min (ns):"))
+        self.time_min_spin = QDoubleSpinBox()
+        self.time_min_spin.setRange(0, 1000)
+        self.time_min_spin.setValue(0)
+        self.time_min_spin.setDecimals(2)
+        self.time_min_spin.valueChanged.connect(self.on_time_range_changed)
+        custom_time_layout.addWidget(self.time_min_spin)
+        
+        custom_time_layout.addWidget(QLabel("Max (ns):"))
+        self.time_max_spin = QDoubleSpinBox()
+        self.time_max_spin.setRange(0.01, 1000)
+        self.time_max_spin.setValue(10) # default max 10ns
+        self.time_max_spin.setDecimals(2)
+        self.time_max_spin.valueChanged.connect(self.on_time_range_changed)
+        custom_time_layout.addWidget(self.time_max_spin)
+        time_layout.addLayout(custom_time_layout)
+        
+        plot_layout.addWidget(self.time_range_widget)
+        self.time_range_widget.hide()
         
         # Log scale options
         scale_layout = QHBoxLayout()
@@ -360,7 +394,7 @@ class S1PMainWindow(QMainWindow):
                 self.canvas.draw_idle()
             return
 
-        x = event.xdata  # in GHz
+        x = event.xdata  # in x units
         y = event.ydata
         if x is None:
             return
@@ -369,13 +403,13 @@ class S1PMainWindow(QMainWindow):
         best = None
         best_dist = float('inf')
         for entry in self.plotted_lines:
-            freq = entry['freq_ghz']
+            x_vals = entry['x_vals']
             vals = entry['values']
-            if len(freq) == 0:
+            if len(x_vals) == 0:
                 continue
             # find index of nearest x
-            idx = np.argmin(np.abs(freq - x))
-            dx = abs(freq[idx] - x)
+            idx = np.argmin(np.abs(x_vals - x))
+            dx = abs(x_vals[idx] - x)
             dy = abs(vals[idx] - y) if y is not None else 0
             # prioritize x closeness
             dist = dx + 0.1 * dy
@@ -387,16 +421,17 @@ class S1PMainWindow(QMainWindow):
             return
 
         entry, idx = best
-        freq_val = entry['freq_ghz'][idx]
+        x_val = entry['x_vals'][idx]
         val = entry['values'][idx]
         label = entry['file'].name
+        x_unit = entry.get('x_unit', 'GHz')
 
-        text = f"{label}\n{freq_val:.4f} GHz\n{val:.4e}"
+        text = f"{label}\n{x_val:.4f} {x_unit}\n{val:.4e}"
 
         if self.annotation is None:
             self.annotation = self.canvas.axes.annotate(
                 text,
-                xy=(freq_val, val), xycoords='data',
+                xy=(x_val, val), xycoords='data',
                 xytext=(15, 15), textcoords='offset points',
                 bbox=dict(boxstyle='round', fc='w'),
                 arrowprops=dict(arrowstyle='->')
@@ -570,7 +605,12 @@ class S1PMainWindow(QMainWindow):
         self.data_manager.apply_frequency_filter_all(freq_min, freq_max)
         self.update_plot()
         self.update_statistics()
-    
+        
+    def on_time_range_changed(self):
+        """Handle time range change for IFFT"""
+        self.update_plot()
+        self.update_statistics()
+
     def reapply_frequency_filter(self):
         """Reapply the current frequency filter selection"""
         range_key = self.range_combo.currentData()
@@ -602,6 +642,16 @@ class S1PMainWindow(QMainWindow):
         # Update the plot and statistics
         self.update_plot()
         self.update_statistics()
+        
+    def on_metric_changed(self):
+        """Handle metric selection change"""
+        metric_key = self.metric_combo.currentData()
+        if metric_key == 's11_ifft':
+            self.time_range_widget.show()
+            self.log_y_check.setChecked(True)  # Auto-enable Log Y for easier viewing of decay
+        else:
+            self.time_range_widget.hide()
+        self.update_plot()
     
     def update_frequency_range(self):
         """Update frequency range spinboxes based on loaded data"""
@@ -616,6 +666,12 @@ class S1PMainWindow(QMainWindow):
             self.freq_min_spin.setValue(min_f / 1e6)
         if self.freq_max_spin.value() > max_f / 1e6 or self.freq_max_spin.value() < min_f / 1e6:
             self.freq_max_spin.setValue(max_f / 1e6)
+            
+    def view_ifft(self):
+        """Switch view to the impulse response via Inverse Fourier Transform."""
+        index = self.metric_combo.findData('s11_ifft')
+        if index >= 0:
+            self.metric_combo.setCurrentIndex(index)
     
     def update_plot(self):
         """Update the plot with current settings"""
@@ -648,26 +704,56 @@ class S1PMainWindow(QMainWindow):
 
         # Prepare storage for hover
         self.plotted_lines = []
+        
+        is_ifft = (metric_key == 's11_ifft')
+        x_label_base = 'Time (ns)' if is_ifft else '{x_label_base}'
+        x_unit = 'ns' if is_ifft else 'GHz'
+        d_label_base = f'd/d{x_unit}'
 
         # Plot each active file
         for file in active_files:
             data = file.get_data(use_filtered=True)
-            if data is None or metric_key not in data:
+            if data is None:
                 continue
 
-            freq = data['frequency']
-            values = data[metric_key]
+            if is_ifft:
+                if 's11' not in data:
+                    continue
+                freq_vals = data['frequency']
+                if len(freq_vals) < 2:
+                    continue
+                df = freq_vals[1] - freq_vals[0]
+                # compute IFFT with Blackman window to reduce artifacts
+                s11_comp = data['s11']
+                window = np.blackman(len(s11_comp))
+                values_arr = np.abs(np.fft.ifft(s11_comp * window))
+                # Generate time array in nanoseconds
+                time_array = np.arange(len(freq_vals)) / (len(freq_vals) * df)
+                x_vals_arr = time_array * 1e9
+            else:
+                if metric_key not in data:
+                    continue
+                freq_vals = data['frequency']
+                values_arr = data[metric_key]
+                x_vals_arr = freq_vals / 1e9
 
             # Filter out invalid values
-            valid_mask = np.isfinite(values)
+            valid_mask = np.isfinite(values_arr)
+            
+            # Apply time filter for IFFT
+            if is_ifft:
+                t_min = self.time_min_spin.value()
+                t_max = self.time_max_spin.value()
+                valid_mask &= (x_vals_arr >= t_min) & (x_vals_arr <= t_max)
+            
             if not np.any(valid_mask):
                 continue
 
-            freq_valid = freq[valid_mask]
-            values_valid = values[valid_mask]
+            freq_valid = x_vals_arr[valid_mask]  # we keep the name freq_valid for minimal change but it's really x_valid
+            values_valid = values_arr[valid_mask]
 
             # Convert frequency to GHz for display
-            freq_ghz = freq_valid / 1e9
+            freq_ghz = freq_valid # Now really x_vals
 
             # Plot data line if requested
             if show_data_lines:
@@ -692,7 +778,8 @@ class S1PMainWindow(QMainWindow):
                 self.plotted_lines.append({
                     'file': file,
                     'line': line,
-                    'freq_ghz': freq_ghz,
+                    'x_vals': freq_ghz,
+                    'x_unit': x_unit,
                     'values': values_valid
                 })
 
@@ -716,7 +803,8 @@ class S1PMainWindow(QMainWindow):
                     self.plotted_lines.append({
                         'file': file,
                         'line': trend_line,
-                        'freq_ghz': freq_ghz,
+                        'x_vals': freq_ghz,
+                    'x_unit': x_unit,
                         'values': trend
                     })
 
@@ -736,7 +824,7 @@ class S1PMainWindow(QMainWindow):
                         y_pos = trend[idx]
                         deriv_val = deriv_values[idx]
                         # Format the derivative value with appropriate precision
-                        deriv_text = f"d/dGHz:\n{deriv_val:.2e}"
+                        deriv_text = f"{d_label_base}:\n{deriv_val:.2e}"
                         self.canvas.axes.annotate(
                             deriv_text,
                             xy=(x_pos, y_pos),
@@ -761,21 +849,21 @@ class S1PMainWindow(QMainWindow):
                     coeffs = np.polyfit(freq_ghz, values_valid, poly_order)
                     deriv_coeffs = np.polyder(coeffs)
                     deriv = np.polyval(deriv_coeffs, freq_ghz)
-                    deriv_label = f"{file.name} d/dGHz (poly{poly_order})"
+                    deriv_label = f"{file.name} {d_label_base} (poly{poly_order})"
                 else:
                     # Use numerical gradient on raw data
                     deriv = np.gradient(values_valid, freq_ghz)
-                    deriv_label = f"{file.name} d/dGHz"
+                    deriv_label = f"{file.name} {d_label_base}"
                 
                 self.deriv_ax.plot(freq_ghz, deriv, linestyle=':', color=file.color, 
                                   alpha=0.9, label=deriv_label)
-                self.deriv_ax.set_ylabel('d(metric)/dGHz', fontweight='bold')
+                self.deriv_ax.set_ylabel(f'd(metric)/d{x_unit}', fontweight='bold')
                 self.deriv_ax.legend(loc='upper right')
         
         # Labels and legend
-        self.canvas.axes.set_xlabel('Frequency (GHz)', fontweight='bold')
+        self.canvas.axes.set_xlabel(x_label_base, fontweight='bold')
         self.canvas.axes.set_ylabel(metric_label, fontweight='bold')
-        self.canvas.axes.set_title(f'{metric_label} vs Frequency', fontweight='bold')
+        self.canvas.axes.set_title(f'{metric_label} vs {x_label_base.split()[0]}', fontweight='bold')
 
         # Only show legend if there are items to display
         handles, _ = self.canvas.axes.get_legend_handles_labels()
@@ -803,7 +891,12 @@ class S1PMainWindow(QMainWindow):
             if data is None:
                 continue
 
-            stats = calculate_statistics(data, metric_key)
+            # Pass time filter if in IFFT mode
+            time_filter = None
+            if metric_key == 's11_ifft':
+                time_filter = (self.time_min_spin.value(), self.time_max_spin.value())
+
+            stats = calculate_statistics(data, metric_key, time_filter=time_filter)
             if not stats:
                 continue
 

@@ -25,6 +25,7 @@ PLOT_COLORS = [
 AVAILABLE_METRICS = [
     ('s11_db', '|S₁₁| (dB)'),
     ('s11_phase', '∠S₁₁ (degrees)'),
+    ('s11_ifft', 'Time Domain |S₁₁| (IFFT)'),
     ('epsilon_prime', "Real Permittivity (ε')"),
     ('epsilon_double_prime', "Imaginary Permittivity (ε'')"),
     ('epsilon_magnitude', 'Complex Permittivity Magnitude (|ε*|)'),
@@ -34,6 +35,7 @@ AVAILABLE_METRICS = [
 METRIC_UNITS = {
     's11_db': 'dB',
     's11_phase': 'degrees',
+    's11_ifft': '',
     'epsilon_prime': '',
     'epsilon_double_prime': '',
     'epsilon_magnitude': '',

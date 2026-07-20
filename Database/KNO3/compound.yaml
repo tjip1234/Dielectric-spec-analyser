@@ -15,7 +15,6 @@ measurements:
       volume_ml: 100.0
       mass_g: 0.5
     data_file: 0.5%.s1p
-  
   - date: 2025-11-19
     temperature_c: 18.0
     solvent: DI water
@@ -24,7 +23,6 @@ measurements:
       volume_ml: 100.0
       mass_g: 1.0
     data_file: 1.0%.s1p
-  
   - date: 2025-11-19
     temperature_c: 18.0
     solvent: DI water
@@ -32,7 +30,15 @@ measurements:
     concentration:
       volume_ml: 100.0
       mass_g: 2.0
-    data_file: 2%-KNO3.s1p
+    data_file: 2.0%.s1p
+  - date: 2025-11-19
+    temperature_c: 18.0
+    solvent: DI water
+    is_pure: false
+    concentration:
+      volume_ml: 100.0
+      mass_g: 3.0
+    data_file: 3.0%.s1p
   
   - date: 2025-11-19
     temperature_c: 18.0
@@ -41,13 +47,4 @@ measurements:
     concentration:
       volume_ml: 100.0
       mass_g: 5.0
-    data_file: 5%-KNO3.s1p
-  
-  - date: 2025-11-19
-    temperature_c: 18.0
-    solvent: DI water
-    is_pure: false
-    concentration:
-      volume_ml: 100.0
-      mass_g: 10.0
-    data_file: 10%-KNO3.s1p
+    data_file: 5.0%.s1p

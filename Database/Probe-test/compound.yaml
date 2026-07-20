@@ -1,0 +1,33 @@
+compound:
+  common_name: Probe test in water
+  chemical_name: Water
+  cas_number: 7732-18-5
+  molecular_weight: 18.015
+  functional_groups: [hydroxyl, hydrogen-bond-donor, hydrogen-bond-acceptor]
+  chemical_formula: H2O
+
+measurements:
+  - date: 2025-12-12
+    temperature_c: null
+    solvent: null
+    is_pure: true
+    notes: New probe
+    data_file: new.s1p
+  - date: 2025-12-12
+    temperature_c: null
+    solvent: null
+    is_pure: true
+    notes: SOCl2-exposed probe with good calibration
+    data_file: socl2-goodcal.s1p
+  - date: 2025-12-12
+    temperature_c: null
+    solvent: null
+    is_pure: true
+    notes: SOCl2-exposed probe with new calibration
+    data_file: socl2-newcal.s1p
+  - date: 2025-12-12
+    temperature_c: null
+    solvent: null
+    is_pure: true
+    notes: Used probe with new calibration
+    data_file: used-newcal.s1p
